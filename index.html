@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang='ko'>
+<head>
+<meta charset='UTF-8'>
+<title>오늘 뭐 먹지?</title>
+<style>
+body{font-family:Arial;max-width:500px;margin:auto;padding:20px;}
+.hidden{display:none;}
+.option{padding:12px;background:#eee;border-radius:8px;margin:10px 0;cursor:pointer;}
+button{padding:12px;width:100%;margin:10px 0;font-size:16px;}
+</style>
+</head>
+<body>
+
+<h1 style='text-align:center;'>오늘 뭐 먹을까요?</h1>
+
+<div id='start'><button onclick='startQ()'>시작하기</button></div>
+<div id='qbox' class='hidden'>
+  <p id='question' style='font-size:20px;font-weight:bold;'></p>
+  <div id='answers'></div>
+</div>
+<div id='recommend' class='hidden'>
+  <h2>추천 메뉴 TOP 5</h2>
+  <div id='reclist'></div>
+</div>
+<div id='result' class='hidden'>
+  <h2>선택한 메뉴</h2>
+  <p id='chosen' style='font-size:22px;font-weight:bold;'></p>
+  <button onclick='openMap()'>근처 맛집 검색하기</button>
+</div>
+
+<script>
+const menuData = [{'name': '김치찌개', 'spicy': 4, 'soup': 5, 'noodle': 0, 'oily': 2, 'korean': 5, 'chinese': 0, 'japanese': 0, 'western': 0, 'snack': 0, 'fast': 0, 'light': 2, 'heavy': 4}, {'name': '된장찌개', 'spicy': 1, 'soup': 5, 'noodle': 0, 'oily': 1, 'korean': 5, 'chinese': 0, 'japanese': 0, 'western': 0, 'snack': 0, 'fast': 0, 'light': 3, 'heavy': 3}, {'name': '순두부찌개', 'spicy': 3, 'soup': 5, 'noodle': 0, 'oily': 1, 'korean': 5, 'chinese': 0, 'japanese': 0, 'western': 0, 'snack': 0, 'fast': 0, 'light': 3, 'heavy': 4}, {'name': '부대찌개', 'spicy': 4, 'soup': 5, 'noodle': 1, 'oily': 4, 'korean': 5, 'chinese': 0, 'japanese': 0, 'western': 0, 'snack': 0, 'fast': 0, 'light': 2, 'heavy': 5}, {'name': '갈비탕', 'spicy': 0, 'soup': 5, 'noodle': 0, 'oily': 2, 'korean': 5, 'chinese': 0, 'japanese': 0, 'western': 0, 'snack': 0, 'fast': 0, 'light': 3, 'heavy': 4}, {'name': '설렁탕', 'spicy': 0, 'soup': 5, 'noodle': 0, 'oily': 2, 'korean': 5, 'chinese': 0, 'japanese': 0, 'western': 0, 'snack': 0, 'fast': 0, 'light': 3, 'heavy': 3}, {'name': '삼계탕', 'spicy': 0, 'soup': 4, 'noodle': 0, 'oily': 2, 'korean': 5, 'chinese': 0, 'japanese': 0, 'western': 0, 'snack': 0, 'fast': 0, 'light': 3, 'heavy': 4}];
+
+const questions=[
+ "매운 음식 좋아하시나요?",
+ "국물 있는 음식 괜찮으세요?",
+ "면 요리를 좋아하시나요?",
+ "기름진 음식 선호도는 어떤가요?",
+ "한식/중식/일식/양식/분식/패스트푸드 중 무엇을 선호하시나요?",
+ "가볍게 먹을지, 든든하게 먹을지?",
+ "빠르게 먹을 수 있는 음식을 선호하시나요?"
+];
+
+let answers=[];
+let idx=0;
+let finalMenu="";
+
+function startQ(){
+ document.getElementById("start").classList.add("hidden");
+ document.getElementById("qbox").classList.remove("hidden");
+ showQ();
+}
+
+function showQ(){
+ document.getElementById("question").innerText=questions[idx];
+ renderOpts();
+}
+
+function renderOpts(){
+ const box=document.getElementById("answers");
+ box.innerHTML="";
+
+ if(idx===4){
+   const cats=["한식","중식","일식","양식","분식","패스트푸드"];
+   cats.forEach((txt,i)=>{
+     let d=document.createElement("div");
+     d.className="option";
+     d.innerText=txt;
+     d.onclick=()=>answer(i);
+     box.appendChild(d);
+   });
+   return;
+ }
+
+ const opts=[0,1,2,3,4,5];
+ opts.forEach(v=>{
+   let d=document.createElement("div");
+   d.className="option";
+   d.innerText=v+" 점";
+   d.onclick=()=>answer(v);
+   box.appendChild(d);
+ });
+}
+
+function answer(v){
+ answers.push(v);
+ idx++;
+ if(idx<questions.length) showQ();
+ else recommend();
+}
+
+function recommend(){
+ document.getElementById("qbox").classList.add("hidden");
+ document.getElementById("recommend").classList.remove("hidden");
+
+ let cat=answers[4];
+
+ let scored=menuData.map(menu=>{
+   const categories=[
+     menu.korean||0,menu.chinese||0,menu.japanese||0,
+     menu.western||0,menu.snack||0,menu.fast||0
+   ];
+
+   let score=
+     Math.abs(menu.spicy-answers[0])+
+     Math.abs(menu.soup-answers[1])+
+     Math.abs(menu.noodle-answers[2])+
+     Math.abs(menu.oily-answers[3])+
+     Math.abs(categories[cat]-5)+
+     Math.abs(menu.light-answers[5])+
+     Math.abs(menu.heavy-answers[5])+
+     Math.abs((menu.fast||0)-answers[6]);
+
+   return {name:menu.name,score};
+ });
+
+ scored.sort((a,b)=>a.score-b.score);
+ let top5=scored.slice(0,5);
+
+ const list=document.getElementById("reclist");
+ list.innerHTML="";
+
+ top5.forEach(item=>{
+   let d=document.createElement("div");
+   d.className="option";
+   d.innerText=item.name;
+   d.onclick=()=>selectMenu(item.name);
+   list.appendChild(d);
+ });
+}
+
+function selectMenu(n){
+ finalMenu=n;
+ localStorage.setItem("last_menu",n);
+ document.getElementById("recommend").classList.add("hidden");
+ document.getElementById("result").classList.remove("hidden");
+ document.getElementById("chosen").innerText=n;
+}
+
+function openMap(){
+ window.open("https://map.naver.com/v5/search/"+encodeURIComponent(finalMenu+" 맛집"),"_blank");
+}
+</script>
+</body>
+</html>
